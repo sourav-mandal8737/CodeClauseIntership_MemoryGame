@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A fun and interactive real-time memory game where users match pairs of cards. Includes features like a timer, score tracking, and a reset option.">
+  <meta name="keywords" content="memory game, real-time game, card matching game, interactive game, JavaScript game, HTML, CSS, game development,memory quest">
+  <meta name="author" content="Sourav Mandal">
+  <title>Memory Quest</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      font-family: Arial, sans-serif;
+      background-image: url(Images/a.jpeg);
+      margin: 0;
+      padding: 0;
+    }
+
+    .game-container {
+      text-align: center;
+      max-width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+
+    header {
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 36px; 
+      font-weight: bold;
+      color: #000; 
+      text-shadow: 
+        2px 2px 0 #ff0000, 
+        -2px -2px 0 #00ff00, 
+        2px -2px 0 #0000ff, 
+        -2px 2px 0 #ffff00; 
+      display: inline-block; 
+      padding-bottom: 5px; 
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 10px;
+    }
+
+    .scoreboard div {
+      color: #333; 
+      font-size: 20px; 
+      font-weight: bold; 
+    }
+
+    #timer, #score {
+      color: #ff9800;
+      font-size: 24px; 
+      font-weight: bold; 
+    }
+
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(6, 110px); 
+      gap: 10px;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .card {
+      width: 100px; 
+      height: 100px; 
+      background-color: #fff;
+      border: 2px solid #333;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    .card.flipped, .card.matched {
+      background-color: #fff;
+      border-color: #4caf50;
+    }
+
+    .card.back {
+      background-image: url('Images/back.png'); 
+    }
+
+    .button-container {
+      margin-top: 20px;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #4caf50; 
+      color: #fff; 
+      border: none;
+      border-radius: 5px;
+      margin: 0 10px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049; 
+    }
+    .modal {
+      display: none; 
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.4);
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <header>
+      <h1>Memory Quest</h1>
+      <div class="scoreboard">
+        <div><span style="color: #ff9800; font-size: 24px;">Time:</span> <span id="timer">00:00</span></div>
+        <div><span style="color: #ff9800; font-size: 24px;">Score:</span> <span id="score">0</span></div>
+      </div>
+    </header>
+    <div class="game-board" id="gameBoard"></div>
+    <div class="button-container">
+      <button id="startButton">Start Game</button>
+      <button id="resetButton">Reset Game</button>
+      <button id="pauseButton">Pause</button>
+      <button id="instructionsButton">Instructions</button>
+    </div>
+  </div>
+
+  <!-- The Modal -->
+  <div id="instructionsModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>How to Play Memory Quest</h2>
+      <p>The objective of the game is to match pairs of cards. Here's how you can play:</p>
+      <ul>
+        <li>Click on a card to flip it and reveal the image.</li>
+        <li>Click on another card to find its matching pair.</li>
+        <li>If the cards match, they will remain flipped. If not, they will turn back over after a short delay.</li>
+        <li>Match all pairs of cards to complete the game.</li>
+        <li>Your score and time are tracked during the game. Try to complete the game as quickly as possible with the highest score.</li>
+      </ul>
+      <p>Good luck and have fun!</p>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const gameBoard = document.getElementById('gameBoard');
+      const timerDisplay = document.getElementById('timer');
+      const scoreDisplay = document.getElementById('score');
+      const startButton = document.getElementById('startButton');
+      const resetButton = document.getElementById('resetButton');
+      const pauseButton = document.getElementById('pauseButton');
+      const instructionsButton = document.getElementById('instructionsButton');
+      const modal = document.getElementById('instructionsModal');
+      const closeModal = document.querySelector('.close');
+
+      const cardImages = [
+        '1', '1', '2', '2', '3', '3', '4', '4',
+        '5', '5', '6', '6', '7', '7', '8', '8',
+        '9', '9', '10', '10', '11', '11', '12', '12'
+      ];
+      let flippedCards = [];
+      let matchedPairs = 0;
+      let timer;
+      let time = 0;
+      let score = 0;
+      let isGameStarted = false;
+      let isPaused = false;
+
+      function setupBoard() {
+        gameBoard.innerHTML = '';
+        const shuffledCards = shuffle(cardImages);
+        shuffledCards.forEach(card => {
+          const cardElement = document.createElement('div');
+          cardElement.classList.add('card', 'back');
+          cardElement.dataset.value = card;
+          gameBoard.appendChild(cardElement);
+        });
+      }
+
+      function startGame() {
+        isGameStarted = true;
+        isPaused = false;
+        startButton.disabled = true;
+        pauseButton.textContent = 'Pause';
+        gameBoard.querySelectorAll('.card').forEach(card => {
+          card.addEventListener('click', flipCard);
+          card.classList.add('back');
+          card.style.backgroundImage = 'url("Images/back.png")';
+        });
+        startTimer();
+      }
+
+      function shuffle(array) {
+        return array.sort(() => 0.5 - Math.random());
+      }
+
+      function flipCard() {
+        if (flippedCards.length < 2 && !this.classList.contains('flipped') && !this.classList.contains('matched') && !isPaused) {
+          this.classList.add('flipped');
+          this.classList.remove('back');
+          this.style.backgroundImage = `url('Images/image${this.dataset.value}.png')`;
+          flippedCards.push(this);
+          if (flippedCards.length === 2) {
+            checkMatch();
+          }
+        }
+      }
+
+      function checkMatch() {
+        const [card1, card2] = flippedCards;
+        if (card1.dataset.value === card2.dataset.value) {
+          matchedPairs++;
+          score += 10;
+          updateScore();
+          flippedCards.forEach(card => card.classList.add('matched'));
+          flippedCards = [];
+          if (matchedPairs === cardImages.length / 2) {
+            clearInterval(timer);
+            alert(`Congratulations! You completed the game in ${time} seconds with a score of ${score}.`);
+          }
+        } else {
+          setTimeout(() => {
+            flippedCards.forEach(card => {
+              card.classList.remove('flipped');
+              card.classList.add('back');
+              card.style.backgroundImage = 'url("Images/back.png")';
+            });
+            flippedCards = [];
+          }, 1000);
+        }
+      }
+
+      function startTimer() {
+        time = 0;
+        timer = setInterval(() => {
+          if (!isPaused) {
+            time++;
+            updateTime();
+          }
+        }, 1000);
+      }
+
+      function updateTime() {
+        const minutes = Math.floor(time / 60);
+        const seconds = time % 60;
+        timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      }
+
+      function updateScore() {
+        scoreDisplay.textContent = score;
+      }
+
+      startButton.addEventListener('click', () => {
+        startGame();
+      });
+
+      resetButton.addEventListener('click', () => {
+        clearInterval(timer);
+        time = 0;
+        score = 0;
+        matchedPairs = 0;
+        flippedCards = [];
+        timerDisplay.textContent = '00:00';
+        scoreDisplay.textContent = '0';
+        isGameStarted = false;
+        isPaused = false;
+        startButton.disabled = false;
+        setupBoard();
+      });
+
+      pauseButton.addEventListener('click', () => {
+        if (isPaused) {
+          isPaused = false;
+          pauseButton.textContent = 'Pause';
+          gameBoard.querySelectorAll('.card.matched').forEach(card => {
+            card.style.backgroundImage = `url('Images/image${card.dataset.value}.png')`;
+          });
+        } else {
+          isPaused = true;
+          pauseButton.textContent = 'Resume';
+          gameBoard.querySelectorAll('.card').forEach(card => {
+            if (!card.classList.contains('matched')) {
+              card.classList.add('back');
+              card.style.backgroundImage = 'url("Images/back.png")';
+            }
+          });
+        }
+      });
+
+      instructionsButton.addEventListener('click', () => {
+        modal.style.display = 'flex';
+      });
+
+      closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+
+      window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+
+      setupBoard();
+    });
+  </script>
+</body>
+</html>
